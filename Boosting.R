@@ -14,3 +14,4 @@ test <- Wage[-index,]
 
 mod1 <- train(wage ~., method = "gbm", data = train, verbose=F)
 mod1
+a
