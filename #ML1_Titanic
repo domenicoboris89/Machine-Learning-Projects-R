@@ -1,2 +1,98 @@
 
-# Prova: Questo è il file Master
+# VARIABLE DESCRIPTIONS:
+#   survival        Survival
+# (0 = No; 1 = Yes)
+# pclass          Passenger Class
+# (1 = 1st; 2 = 2nd; 3 = 3rd)
+# name            Name
+# sex             Sex
+# age             Age
+# sibsp           Number of Siblings/Spouses Aboard
+# parch           Number of Parents/Children Aboard
+# ticket          Ticket Number
+# fare            Passenger Fare
+# cabin           Cabin
+# embarked        Port of Embarkation
+# (C = Cherbourg; Q = Queenstown; S = Southampton)
+# 
+# SPECIAL NOTES:
+#   Pclass is a proxy for socio-economic status (SES)
+# 1st ~ Upper; 2nd ~ Middle; 3rd ~ Lower
+# 
+# Age is in Years; Fractional if Age less than One (1)
+# If the Age is Estimated, it is in the form xx.5
+# 
+# With respect to the family relation variables (i.e. sibsp and parch)
+# some relations were ignored.  The following are the definitions used
+# for sibsp and parch.
+# 
+# Sibling:  Brother, Sister, Stepbrother, or Stepsister of Passenger Aboard Titanic
+# Spouse:   Husband or Wife of Passenger Aboard Titanic (Mistresses and Fiances Ignored)
+# Parent:   Mother or Father of Passenger Aboard Titanic
+# Child:    Son, Daughter, Stepson, or Stepdaughter of Passenger Aboard Titanic
+# 
+# Other family relatives excluded from this study include cousins,
+# nephews/nieces, aunts/uncles, and in-laws.  Some children travelled
+# only with a nanny, therefore parch=0 for them.  As well, some
+# travelled with very close friends or neighbors in a village, however,
+# the definitions do not support such relations.
+
+library(ggplot2)
+library(randomForest)
+
+set.seed(1)
+train <- read.csv(url("http://s3.amazonaws.com/assets.datacamp.com/course/Kaggle/train.csv"), stringsAsFactors=FALSE)
+test <- read.csv(url("http://s3.amazonaws.com/assets.datacamp.com/course/Kaggle/test.csv"), stringsAsFactors=FALSE)
+
+
+# Data preprocessing function
+extractFeatures <- function(data) {
+  features <- c("Pclass",
+                "Age",
+                "Sex",
+                "Parch",
+                "SibSp",
+                "Fare",
+                "Embarked")
+  fea <- data[,features]
+  fea$Age[is.na(fea$Age)] <- -1
+  fea$Fare[is.na(fea$Fare)] <- median(fea$Fare, na.rm=TRUE)
+  fea$Embarked[fea$Embarked==""] = "S"
+  fea$Sex      <- as.factor(fea$Sex)
+  fea$Embarked <- as.factor(fea$Embarked)
+  return(fea)
+}
+
+# Run a RandomForest model on the training set preprocessed. randomForest package.
+rf <- randomForest(extractFeatures(train), as.factor(train$Survived), ntree=100, importance=TRUE)
+
+# submission <- data.frame(PassengerId = test$PassengerId)
+# submission$Survived <- predict(rf, extractFeatures(test))
+# write.csv(submission, file = "1_random_forest_r_submission.csv", row.names=FALSE)
+
+# Variable Importance. importance is a method for randomForest's object
+imp <- importance(rf, type=1)
+featureImportance <- data.frame(Feature=row.names(imp), Importance=imp[,1])
+
+imp_2 <- importance(rf, type=2)
+featureImportance_2 <- data.frame(Feature=row.names(imp_2), Importance=imp_2[,1])
+
+p <- ggplot(featureImportance, aes(x=reorder(Feature, Importance), y=Importance)) +
+  geom_bar(stat="identity", fill="#53cfff") +
+  coord_flip() + 
+  theme_light(base_size=20) +
+  xlab("") +
+  ylab("Mean decrease Accuracy") + 
+  ggtitle("Random Forest Feature Importance\n") +
+  theme(plot.title=element_text(size=18))
+
+p_2 <- ggplot(featureImportance_2, aes(x=reorder(Feature, Importance), y=Importance)) +
+  geom_bar(stat="identity", fill="#53cfff") +
+  coord_flip() + 
+  theme_light(base_size=20) +
+  xlab("") +
+  ylab("Mean Gini decrease impurity") + 
+  ggtitle("Random Forest Feature Importance\n") +
+  theme(plot.title=element_text(size=18))
+
+#ggsave("2_feature_importance.png", p)
