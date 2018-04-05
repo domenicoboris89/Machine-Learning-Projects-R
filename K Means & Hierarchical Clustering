@@ -1,0 +1,48 @@
+# Set random seed. Don't remove this line.
+set.seed(1)
+
+# Scale the dataset: crime_data_sc NORMALIZZARE
+crime_data_sc<-scale(crime_data)
+
+# Determine number of clusters
+wss <- (nrow(crime_data)-1)*sum(apply(crime_data,2,var))
+for (i in 2:15) wss[i] <- sum(kmeans(crime_data, 
+  	centers=i)$withinss)
+plot(1:15, wss, type="b", xlab="Number of Clusters",
+  ylab="Within groups sum of squares")
+
+# DEFINITA UNA MISURA DI SIMILARITà (ES. EUCLIDEANA ovvero il quadrato della somma delle distanze/differenze tra le p variabili per ogni i individuo)
+# Algoritmo K-means : 1) centroidi 2) precluster 3) medie -> repeat step 2 e 3 fino a convergenza. 
+# Perform k-means clustering: crime_km K = 4 , Nstart numero iterazioni
+
+crime_km<-kmeans(crime_data_sc,4,nstart=20)
+
+#SINGLE LINKAGE è agglomerativo, si parte da k=n cluster e si agglomera fino a 1 super cluster. Si taglia il dendrogramma in K cluster
+#COMPLETE LINKAGE è divisivo, si parte da k=1 supercluster e si divide fino a n cluster. Si taglia il dendrogramma in K cluster.
+
+# Perform single-linkage hierarchical clustering  
+## Calculate the distance matrix: dist_matrix
+dist_matrix<-dist(crime_data_sc)
+
+## Calculate the clusters using hclust(): crime_single
+crime_single<-hclust(dist_matrix, method = "single")
+
+## Cut the clusters using cutree: memb_single
+memb_single<-cutree(crime_single,4)
+
+# L'indice di Dunn è definito dal rapporto tra la minima distanza tra due punti appartenenti a due cluster ed il massimo diametro. Un indice di Dunn alto può essere
+# espressione di un buon clustering.
+# Calculate the Dunn's index for both clusterings: dunn_km, dunn_single
+
+dunn_km<-dunn(cluster=crime_km$cluster, Data=crime_data_sc)
+dunn_single<-dunn(cluster=memb_single, Data=crime_data_sc)
+
+# Print out the results
+dunn_single
+dunn_km
+
+#Library clusters allow us to represent (with the aid of PCA) the cluster solution into 2 dimensions:
+library(cluster)
+clusplot(crime_data_sc, crime_km$cluster, main='2D representation of the Cluster solution',
+         color=TRUE, shade=TRUE,
+         labels=2, lines=0)
