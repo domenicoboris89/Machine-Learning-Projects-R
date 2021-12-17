@@ -7,3 +7,5 @@ Machine Learning Algorythms on R:
 - Boosting
 - Bagging
 - Random Forest
+
+update 2021
